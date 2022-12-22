@@ -183,7 +183,7 @@ const updates = class{
     var diff = Math.abs(new Date(current) - new Date(dateString));
     var minutes = Math.floor((diff/1000)/60);
 
-    if (minutes == 8){
+    if (minutes == 10){
       meetingData=i[this.i_num]
     }
 
@@ -191,7 +191,7 @@ const updates = class{
       if (isTime){
         sendAlarm(sendmsg(meetingData));
       }
-      if (minutes !== 8){
+      if (minutes !== 10){
         isTime=true
         meetingData=''
       }
