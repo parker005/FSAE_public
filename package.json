@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "discord.js": "^14.7.1",
+    "dotenv": "^16.0.3",
+    "googleapis": "^109.0.1",
+    "nvm": "^0.0.4",
+    "underscore": "^1.13.6"
+  }
+}
