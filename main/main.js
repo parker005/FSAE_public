@@ -12,7 +12,7 @@ client.on('ready', () => {
     console.log(client.user.tag)
 });
 
-
+//google api cred imports
 const GOOGLE_PRIVATE_KEY = process.env.private_key.replace(/\\n/g, "\n");
 const GOOGLE_CLIENT_EMAIL = process.env.client_email;
 const GOOGLE_PROJECT_NUMBER = process.env.project_number;
@@ -49,13 +49,13 @@ const eventWeekly = class{
         console.log(this.channel)
     }
 
-    combination(i){ //input data
-        let title = i[this.i_num].summary //get summary for z value
-        let desc = i[this.i_num].description //get description for z value
-        let time = i[this.i_num].start.dateTime //get starting time for z value
-        console.log(title+" "+desc+" "+time)
+    combination(i){ 
+        let title = i[this.i_num].summary //get summary for u value
+        let desc = i[this.i_num].description //get description for u value
+        let time = i[this.i_num].start.dateTime //get starting time for u value
+        console.log(title+" "+desc+" "+time) //log events at time to console
         var date = new Date(time);
-        var formatOptions = { 
+        var formatOptions = { //convert to readable time
               day:    '2-digit', 
               month:  '2-digit', 
               year:   'numeric',
@@ -70,7 +70,7 @@ const eventWeekly = class{
                                .replace('AM', 'a.m.');
 
         const embed = new EmbedBuilder() //build embed
-            .setTitle(title)
+            .setTitle(title) //event title
             .setDescription(desc+'\n'+'```'+dateString+'```') //send date in codeblock
         
         async function announce(channelId){ //sending function
@@ -84,14 +84,15 @@ const eventWeekly = class{
     }
 }
 
-function listCalendarEvents(channel){
+function listCalendarEvents(channel){ //weekly list
   var d = new Date();
-  d.setDate(d.getDate() + (7-d.getDay())%7+1);
+  d.setDate(d.getDate() + (7-d.getDay())%7+1); //set d as 1 week from now
   return new Promise((resolve)=> {
     calendar.events.list(
       {
         calendarId: GOOGLE_CALENDAR_ID,
         timeMin: new Date().toISOString(),
+        timeMax: d,
         maxResults: 10,
         singleEvents: true,
         orderBy: "startTime",
@@ -99,8 +100,8 @@ function listCalendarEvents(channel){
       (error, result1) => {
         if (error) {
           console.log("Something went wrong: ", error); // If there is an error, log it to the console
-          console.log("trying again....")
-          listCalendarEvents(channel)
+          console.log("trying again....") 
+          listCalendarEvents(channel) //try to fetch from the api again
         } else {
           if (result1.data.items.length > 0) {
             let data1 = result1.data.items; //let data equal api result
@@ -114,7 +115,7 @@ function listCalendarEvents(channel){
             const delay = async (ms = 1000) =>
               new Promise(resolve => setTimeout(resolve, ms))
             
-            while (u<count){//while z is less than number of entries
+            while (u<count){//while u is less than number of entries
               x = new eventWeekly(u,channel); //initialize class with current value
               x.combination(o); //send message
               u++; //add to u
@@ -134,7 +135,7 @@ function listCalendarEvents(channel){
 function sendmsg(data){
   let title = data.summary
   let description = data.description
-  function sendLocation(keyword){
+  function sendLocation(keyword){ //look for keywords inside each event title and assign channel and role IDs
     let titleKeyword = keyword.toLowerCase()
     let meetingTitle;
     let channelID;
@@ -209,13 +210,13 @@ function sendmsg(data){
     }
 
   let sendTarget = sendLocation(title);
-  let messageTitle = sendTarget[0];
+  let messageTitle = sendTarget[0]; //get values from keyword function
   let channelID = sendTarget[1];
   let roleID = sendTarget[2];
   const data_embed = new EmbedBuilder() //build embed
     .setTitle(messageTitle+' starting in 10 minutes!')
-    .setDescription(description) //send date in codeblock
-  return [data_embed,channelID,roleID];
+    .setDescription(description) 
+  return [data_embed,channelID,roleID]; //return embed with IDs
 }
 
 async function sendAlarm(embed,channelID,roleID){ //sending function
@@ -226,7 +227,7 @@ async function sendAlarm(embed,channelID,roleID){ //sending function
 }
 
 
-var obj = {
+var obj = { //create empty object
   table: []
 };
 
@@ -236,24 +237,24 @@ const updates = class{
   }
 
   check(i){
-    let startTime1 = i[this.i_num].start.dateTime;
-    var diff = new Date(startTime1).getTime()-Date.now();
-    var minutes = Math.floor((diff/1000)/60);
+    let startTime1 = i[this.i_num].start.dateTime; //get start time from api response
+    var diff = new Date(startTime1).getTime()-Date.now(); //get time difference in ms
+    var minutes = Math.floor((diff/1000)/60); //convert to minutes
     if (minutes == 10){
-      if (!obj.table.includes(i[this.i_num].summary)){
-        obj.table.push(i[this.i_num].summary)
-        let info = sendmsg(i[this.i_num])
-        let embed = info[0];
-        let channelID = info[1];
+      if (!obj.table.includes(i[this.i_num].summary)){ //if meeting isn't inside object
+        obj.table.push(i[this.i_num].summary) //add it
+        let info = sendmsg(i[this.i_num]) //send announcement message
+        let embed = info[0]; //construct embed
+        let channelID = info[1]; 
         let roleID = info[2];
-        sendAlarm(embed, channelID, roleID);
+        sendAlarm(embed, channelID, roleID); //send message
       }
     }
-    if (minutes !== 10){
+    if (minutes !== 10){ //if meeting no longer in 10 minutes
       if (obj.table.includes(i[this.i_num].summary)){
-        for (var i = 0; i<obj.table.length; i++){
-          if (obj.table[i] === i[this.i_num.summary]){
-            obj.table.splice(i, 1);
+        for (var i = 0; i<obj.table.length; i++){ //search through object
+          if (obj.table[i] === i[this.i_num.summary]){ //if meeting in object
+            obj.table.splice(i, 1); //remove it
           }
         }
       }
@@ -262,7 +263,7 @@ const updates = class{
   }
 }
 
-function eventUpdates(){
+function eventUpdates(){ //check if event is in 10 minutes
   calendar.events.list(
     {
       calendarId: GOOGLE_CALENDAR_ID,
@@ -274,7 +275,7 @@ function eventUpdates(){
     (error, result) => {
       if (error) {
         console.log("Something went wrong: ", error); // If there is an error, log it to the console
-        eventUpdates()
+        eventUpdates() //retry
       } else {
         if (result.data.items.length > 0) {
           let data = result.data.items; //let data equal api result
@@ -287,7 +288,7 @@ function eventUpdates(){
           let z = 0 //initial value
           while (z<count){ //while z is less than number of entries
               t = new updates(z); //initialize class with current value
-              t.check(i); //send message
+              t.check(i); //check if its time to send message
               z++; //add to z
           }
            // If there are events, print them out
@@ -299,14 +300,14 @@ function eventUpdates(){
   );
 };
 
-async function redef(){
+async function redef(){ //put function in a format to where it can be ran on an interval
   eventUpdates();
-}
+} 
 
 
-schedule.scheduleJob('0 8 * * *', () => {listCalendarEvents('1056017728374321232')});
+schedule.scheduleJob('0 8 * * *', () => {listCalendarEvents('1056017728374321232')}); //send weekly updates every sunday
 
-setInterval(redef, 10000);
+setInterval(redef, 10000); //check if its time for event announcement every 10 seconds
 
 client.on('interactionCreate', async interaction => {
   const { commandName } = interaction;
@@ -321,9 +322,9 @@ client.on('interactionCreate', async interaction => {
 
   if (commandName === 'weekly') {
     let channel;
-    channel = interaction.channelId
+    channel = interaction.channelId //get channel from interaction
     console.log(channel)
-    listCalendarEvents(channel);
+    listCalendarEvents(channel); //send with channel 
     return interaction.reply("Listing events....")
   }
 });
