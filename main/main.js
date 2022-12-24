@@ -6,6 +6,7 @@ const { google } = require("googleapis");
 const fs = require('fs');
 require("dotenv").config();
 const _ = require('underscore');
+const schedule = require('node-schedule');
 
 client.on('ready', () => {
     console.log(client.user.tag)
@@ -42,8 +43,10 @@ const auth = new google.auth.GoogleAuth({
 const sleep = ms => new Promise(res => setTimeout(res, ms));
 
 const eventWeekly = class{
-    constructor(i_num){
-        this.i_num=i_num //assign value number
+    constructor(i_num,channel){
+        this.i_num=i_num 
+        this.channel=channel//assign value number
+        console.log(this.channel)
     }
 
     combination(i){ //input data
@@ -70,17 +73,20 @@ const eventWeekly = class{
             .setTitle(title)
             .setDescription(desc+'\n'+'```'+dateString+'```') //send date in codeblock
         
-        async function announce(){ //sending function
+        async function announce(channelId){ //sending function
           console.log('worked')
-          const channel = await client.channels.fetch('917926628561150046') //channel
+          console.log(channelId)
+          const channel = await client.channels.fetch(channelId) //channel
           await channel.send({ embeds: [embed] }); //send embed
         }
 
-        announce();
+        announce(this.channel);
     }
 }
 
-function listCalendarEvents(){
+function listCalendarEvents(channel){
+  var d = new Date();
+  d.setDate(d.getDate() + (7-d.getDay())%7+1);
   return new Promise((resolve)=> {
     calendar.events.list(
       {
@@ -93,6 +99,8 @@ function listCalendarEvents(){
       (error, result1) => {
         if (error) {
           console.log("Something went wrong: ", error); // If there is an error, log it to the console
+          console.log("trying again....")
+          listCalendarEvents(channel)
         } else {
           if (result1.data.items.length > 0) {
             let data1 = result1.data.items; //let data equal api result
@@ -107,14 +115,10 @@ function listCalendarEvents(){
               new Promise(resolve => setTimeout(resolve, ms))
             
             while (u<count){//while z is less than number of entries
-              x = new eventWeekly(u); //initialize class with current value
+              x = new eventWeekly(u,channel); //initialize class with current value
               x.combination(o); //send message
               u++; //add to u
             }
-
-          
-
-             // If there are events, print them out
           } else {
             console.log("No upcoming events found."); // If no events are found
           }
@@ -127,41 +131,104 @@ function listCalendarEvents(){
 }
 
 
-let current = null;
-function current_time(){
-  var today= new Date;
-  var date = today.getFullYear()+'/'+(today.getMonth()+1)+'/'+today.getDate();
-  var time = today.getHours() + ":" + today.getMinutes();
-  current = date+" "+time
-}
+function sendmsg(data){
+  let title = data.summary
+  let description = data.description
+  function sendLocation(keyword){
+    let titleKeyword = keyword.toLowerCase()
+    let meetingTitle;
+    let channelID;
+    let roleID;
+    if (titleKeyword.includes('2023 team leads')){
+      meetingTitle = '2023 Team Leads';
+      channelID = '1056011941279178842';
+      roleID = '1055924215733309440';
+    } else if(titleKeyword.includes('2024 team leads')){
+      meetingTitle = '2024 Team Leads';
+      channelID = '1056017912923684955'
+      roleID = '1055924298730197012';
+    } else if(titleKeyword.includes('chassis')){
+      meetingTitle = 'Chassis';
+      channelID = '1056018027902152744'
+      roleID = '1055924393043300433'
+    } else if(titleKeyword.includes('powertrain')){
+      meetingTitle = 'Powertrain'
+      channelID = '1056018154972786739'
+      roleID = '1055924422659293245';
+    } else if(titleKeyword.includes('vehicle dynamics')){
+      meetingTitle = 'Vehicle Dynamics';
+      channelID = '1056018323692859502';
+      roleID = '1055924455370661888';
+    } else if(titleKeyword.includes('ergonomics')){
+      meetingTitle = 'Ergonomics';
+      channelID = '1056018516140113943';
+      roleID = '1055924485213126656';
+    } else if(titleKeyword.includes('low voltage electronics')){
+      meetingTitle = 'Low Voltage Electronics';
+      channelID = '1056018644196397096';
+      roleID = '1055924491504599060';
+    } else if(titleKeyword.includes('brakes')){
+      meetingTitle = 'Brakes';
+      channelID = '1056018767177588836';
+      roleID = '1055924496294486026';
+    } else if(titleKeyword.includes('aerodynamics')){
+      meetingTitle = 'Aerodynamics';
+      channelID = '1056019015954346014';
+      roleID = '1055924562526752929';
+    } else if(titleKeyword.includes('aero')){
+      meetingTitle = 'Aerodynamics';
+      channelID = '1056019015954346014';
+      roleID = '1055924562526752929';
+    } else if(titleKeyword.includes('areo')){
+      meetingTitle = 'Aerodynamics';
+      channelID = '1056019015954346014';
+      roleID = '1055924562526752929';      
+    } else if(titleKeyword.includes('vd')){
+      meetingTitle = 'Vehicle Dynamics';
+      channelID = '1056018323692859502';
+      roleID = '1055924455370661888';      
+    } else if(titleKeyword.includes('ergo')){
+      meetingTitle = 'Ergonomics';
+      channelID = '1056018516140113943';
+      roleID = '1055924485213126656';      
+    } else if(titleKeyword.includes('low voltage')){
+      meetingTitle = 'Low Voltage Electronics';
+      channelID = '1056018644196397096';
+      roleID = '1055924491504599060';      
+    } else if(titleKeyword.includes('lv')){
+      meetingTitle = 'Low Voltage Electronics';
+      channelID = '1056018644196397096';
+      roleID = '1055924491504599060';      
+    } else {
+      meetingTitle = keyword;
+      channelID = '1056017728374321232';
+      roleID = '917926628561150043'
+    }
+    
+    return [meetingTitle, channelID, roleID];
+    }
 
-async function getCurrentTime(){
-  current_time();
-}
-
-setInterval(getCurrentTime, 1000)
-
-console.log(current)
-
-let meetingData=null;
-
-let isTime = true;
-
-function sendmsg(){
-  let title = meetingData.summary
-  let description = meetingData.description
-  isTime=false
+  let sendTarget = sendLocation(title);
+  let messageTitle = sendTarget[0];
+  let channelID = sendTarget[1];
+  let roleID = sendTarget[2];
   const data_embed = new EmbedBuilder() //build embed
-    .setTitle(title+' starting in 10 minutes!')
+    .setTitle(messageTitle+' starting in 10 minutes!')
     .setDescription(description) //send date in codeblock
-  return data_embed
+  return [data_embed,channelID,roleID];
 }
 
-async function sendAlarm(embed){ //sending function
+async function sendAlarm(embed,channelID,roleID){ //sending function
   console.log('worked')
-  const channel = await client.channels.fetch('1055313435941937252') //channel
+  const channel = await client.channels.fetch(channelID) //channel
   await channel.send({ embeds: [embed] }); //send embed
+  await channel.send('<@&'+roleID+'>');
 }
+
+
+var obj = {
+  table: []
+};
 
 const updates = class{
   constructor(i_num){
@@ -170,36 +237,30 @@ const updates = class{
 
   check(i){
     let startTime1 = i[this.i_num].start.dateTime;
-    var date = new Date(startTime1);
-        var formatOptions = { 
-              day:    '2-digit', 
-              month:  '2-digit', 
-              year:   'numeric',
-              hour:   '2-digit', 
-              minute: '2-digit',
-              hour12: false 
-          };
-    var dateString = date.toLocaleDateString('en-US', formatOptions).replace(', ', ' ');
-    var diff = Math.abs(new Date(current) - new Date(dateString));
+    var diff = new Date(startTime1).getTime()-Date.now();
     var minutes = Math.floor((diff/1000)/60);
-
     if (minutes == 10){
-      meetingData=i[this.i_num]
-    }
-
-    if (i[this.i_num] == meetingData){
-      if (isTime){
-        sendAlarm(sendmsg(meetingData));
+      if (!obj.table.includes(i[this.i_num].summary)){
+        obj.table.push(i[this.i_num].summary)
+        let info = sendmsg(i[this.i_num])
+        let embed = info[0];
+        let channelID = info[1];
+        let roleID = info[2];
+        sendAlarm(embed, channelID, roleID);
       }
-      if (minutes !== 10){
-        isTime=true
-        meetingData=''
+    }
+    if (minutes !== 10){
+      if (obj.table.includes(i[this.i_num].summary)){
+        for (var i = 0; i<obj.table.length; i++){
+          if (obj.table[i] === i[this.i_num.summary]){
+            obj.table.splice(i, 1);
+          }
+        }
       }
     }
 
   }
 }
-
 
 function eventUpdates(){
   calendar.events.list(
@@ -213,6 +274,7 @@ function eventUpdates(){
     (error, result) => {
       if (error) {
         console.log("Something went wrong: ", error); // If there is an error, log it to the console
+        eventUpdates()
       } else {
         if (result.data.items.length > 0) {
           let data = result.data.items; //let data equal api result
@@ -241,10 +303,10 @@ async function redef(){
   eventUpdates();
 }
 
-listCalendarEvents();
 
+schedule.scheduleJob('0 8 * * *', () => {listCalendarEvents('1056017728374321232')});
 
-setInterval(redef, 1000);
+setInterval(redef, 10000);
 
 client.on('interactionCreate', async interaction => {
   const { commandName } = interaction;
@@ -255,6 +317,14 @@ client.on('interactionCreate', async interaction => {
         .setDescription('dsfasdfsdf')
       
     return interaction.reply({ embeds: [embed]})
+  }
+
+  if (commandName === 'weekly') {
+    let channel;
+    channel = interaction.channelId
+    console.log(channel)
+    listCalendarEvents(channel);
+    return interaction.reply("Listing events....")
   }
 });
 
