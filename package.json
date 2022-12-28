@@ -1,6 +1,6 @@
 {
-  "scripts:{
-    "start":"main/main.js"
+  "scripts":{
+    "start": "main/main.js"
   },
   "dependencies": {
     "discord.js": "^14.7.1",
